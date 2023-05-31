@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Word Table</h2>
+
+<div>
+    <button onclick="addRow()">Add Word</button>
+    <button onclick="toggleWords()">Hide/Show Words</button>
+    <button onclick="clearUserInput()">Clear User Input</button>
+    <label for="csvFile">Import words from CSV:</label>
+    <input type="file" id="csvFile" accept=".csv" onchange="loadCSV(event)" />
+</div>
+
+<table id="wordTable">
+    <tr>
+        <th class="wordColumn">Word</th>
+        <th>Meaning</th>
+        <th>User Input</th>
+        <th>Correct?</th>
+        <th>Select</th>
+        <th>Action</th>
+    </tr>
+</table>
+
+<h2>Sub Table</h2>
+
+<div>
+    <button onclick="exportCSV()">Export to CSV</button>
+</div>
+
+<table id="subTable">
+    <tr>
+        <th>Word</th>
+        <th>Meaning</th>
+    </tr>
+</table>
+<script src="ja.js"></script>
+<script>
+let wordsVisible = true;
+
+window.onload = function() {
+    let data = JSON.parse(localStorage.getItem('wordData'));
+    if (data) {
+        data.forEach(item => addRow(item.word, item.meaning));
+    }
+}
+
+function addRow(word, meaning) {
+    let table = document.getElementById("wordTable");
+
+    if (!word || !meaning) {
+        word = prompt("Enter a word:");
+        meaning = prompt("Enter its meaning:");
+        let data = JSON.parse(localStorage.getItem('wordData')) || [];
+        data.push({word: word, meaning: meaning});
+        localStorage.setItem('wordData', JSON.stringify(data));
+    }
+
+    let row = table.insertRow(-1);
+    let cell1 = row.insertCell(0);
+    let cell2 = row.insertCell(1);
+    let cell3 = row.insertCell(2);
+    let cell4 = row.insertCell(3);
+    let cell5 = row.insertCell(4);
+    let cell6 = row.insertCell(5);
+
+    cell1.innerHTML = word;
+    cell1.className = "wordColumn";
+    cell2.innerHTML = meaning;
+
+    let input = document.createElement('input');
+    input.type = 'text';
+    input.oninput = function() {
+        cell4.innerHTML = this.value === word ? '〇' : '✕';
+    };
+
+    // Add event listener to move focus to next input field on Enter or Tab press
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            let nextInput = this.parentElement.parentElement.nextElementSibling?.querySelector('input');
+            if (nextInput) {
+                nextInput.focus();
+            } else {
+                let nextRow = this.parentElement.parentElement.parentElement.nextElementSibling;
+                if (nextRow) {
+                    let firstInput = nextRow.querySelector('input');
+                    if (firstInput) {
+                        firstInput.focus();
+                    }
+                }
+            }
+        }
+    });
+    cell3.appendChild(input);
+
+    let selectCheckbox = document.createElement('input');
+    selectCheckbox.type = 'checkbox';
+    selectCheckbox.onchange = function() {
+        if (this.checked) {
+            addToSubTable(word, meaning);
+        } else {
+            removeFromSubTable(word, meaning);
+        }
+    };
+    cell5.appendChild(selectCheckbox);
+
+    let deleteButton = document.createElement('button');
+    deleteButton.innerText = 'Delete';
+    deleteButton.onclick = function() {
+        let data = JSON.parse(localStorage.getItem('wordData'));
+        data = data.filter(item => item.word !== word && item.meaning !== meaning);
+        localStorage.setItem('wordData', JSON.stringify(data));
+        table.deleteRow(row.rowIndex);
+        removeFromSubTable(word, meaning);
+    };
+    cell6.appendChild(deleteButton);
+}
+
+function addToSubTable(word, meaning) {
+    let table = document.getElementById("subTable");
+    let row = table.insertRow(-1);
+    let cell1 = row.insertCell(0);
+    let cell2 = row.insertCell(1);
+    cell1.innerHTML = word;
+    cell2.innerHTML = meaning;
+    row.id = 'subTable-' + word;
+}
+
+function removeFromSubTable(word, meaning) {
+    let table = document.getElementById("subTable");
+    let row = document.getElementById('subTable-' + word);
+    if (row) table.deleteRow(row.rowIndex);
+}
+
+function toggleWords() {
+    let wordColumns = document.getElementsByClassName("wordColumn");
+    for (let i = 0; i < wordColumns.length; i++) {
+        wordColumns[i].style.display = wordsVisible ? 'none' : '';
+    }
+    wordsVisible = !wordsVisible;
+}
+
+function loadCSV(event) {
+    let file = event.target.files[0];
+    let reader = new FileReader();
+    reader.onload = function(event) {
+        let data = event.target.result;
+        let lines = data.split('\n');
+        lines.forEach(line => {
+            let [word, meaning] = line.split(',');
+            addRow(word, meaning);
+        });
+    };
+    reader.readAsText(file);
+}
+
+function exportCSV() {
+    let table = document.getElementById("subTable");
+    let csv = [];
+    for (let i = 1; i < table.rows.length; i++) {
+        let row = table.rows[i];
+        let word = row.cells[0].innerText;
+        let meaning = row.cells[1].innerText;
+        csv.push(word + ',' + meaning);
+    }
+    let csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+    let encodedUri = encodeURI(csvContent);
+    let link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "subTable.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function clearUserInput() {
+    let table = document.getElementById("wordTable");
+    for (let i = 1; i < table.rows.length; i++) {
+        let userInputCell = table.rows[i].cells[2];
+        let userInputField = userInputCell.children[0];
+        userInputField.value = '';
+        table.rows[i].cells[3].innerHTML = '';
+    }
+}
+
+
+</script>
+
+</body>
+</html>
+
+</html>
