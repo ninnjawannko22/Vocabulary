@@ -16,10 +16,12 @@
 <h2>Word Table</h2>
 
 <div>
-    <button onclick="addRow()">Add Word</button>
-    <button onclick="toggleWords()">Hide/Show Words</button>
-    <button onclick="clearUserInput()">Clear User Input</button>
-    <label for="csvFile">Import words from CSV:</label>
+    <button onclick="addRow()">単語</button>
+    <button onclick="toggleWords()">単語を隠す/見る</button>
+    <button onclick="swapRows()">単語 ⇄ 意味</button> 
+    <button onclick="clearUserInput()">入力欄一括削除</button>
+    <button onclick="exportCSV('wordTable', 'wordTable.csv')">Export to CSV</button> <!-- 変更 -->
+    <label for="csvFile">Import CSV:</label>
     <input type="file" id="csvFile" accept=".csv" onchange="loadCSV(event)" />
 </div>
 
@@ -37,7 +39,7 @@
 <h2>Sub Table</h2>
 
 <div>
-    <button onclick="exportCSV()">Export to CSV</button>
+    <button onclick="exportCSV('subTable', 'subTable.csv')">Export to CSV</button>
 </div>
 
 <table id="subTable">
@@ -46,7 +48,7 @@
         <th>Meaning</th>
     </tr>
 </table>
-<script src="ja.js"></script>
+
 <script>
 let wordsVisible = true;
 
@@ -153,6 +155,24 @@ function toggleWords() {
     wordsVisible = !wordsVisible;
 }
 
+function swapRows() { // 単語、意味列入替え
+    let table = document.getElementById("wordTable");
+    for (let i = 1; i < table.rows.length; i++) {
+        let row = table.rows[i];
+        let wordCell = row.cells[0];
+        let meaningCell = row.cells[1];
+
+        let tempHTML = wordCell.innerHTML;
+        let tempClassName = wordCell.className;
+
+        wordCell.innerHTML = meaningCell.innerHTML;
+        wordCell.className = meaningCell.className;
+
+        meaningCell.innerHTML = tempHTML;
+        meaningCell.className = tempClassName;
+    }
+}
+
 function loadCSV(event) {
     let file = event.target.files[0];
     let reader = new FileReader();
@@ -167,8 +187,8 @@ function loadCSV(event) {
     reader.readAsText(file);
 }
 
-function exportCSV() {
-    let table = document.getElementById("subTable");
+function exportCSV(tableId, filename) {
+    let table = document.getElementById(tableId);
     let csv = [];
     for (let i = 1; i < table.rows.length; i++) {
         let row = table.rows[i];
@@ -180,7 +200,7 @@ function exportCSV() {
     let encodedUri = encodeURI(csvContent);
     let link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "subTable.csv");
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
